@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Dapr.Client;
 using System.IO;
+using System.Diagnostics;
 
 namespace Provider
 {
@@ -67,14 +68,26 @@ namespace Provider
 
                 TwitterTweet tweet = null;
                 string tweetContent = string.Empty;
-                using (MemoryStream memoryStream = new MemoryStream())
+
+
+                int random = new Random().Next();
+
+                if(random % 2 == 0)
                 {
-                    await requestBodyStream.CopyToAsync(memoryStream).ConfigureAwait(false);
-                    for (int i = 0; i < 10000; i++)
+                    RunSort(5000);
+                    tweet = await JsonSerializer.DeserializeAsync<TwitterTweet>(requestBodyStream);
+                }
+                else
+                {
+                    using (MemoryStream memoryStream = new MemoryStream())
                     {
-                        memoryStream.Seek(0, SeekOrigin.Begin);
-                        tweet = await JsonSerializer.DeserializeAsync<TwitterTweet>(memoryStream).ConfigureAwait(false);
-                        tweetContent += tweet.Text;
+                        await requestBodyStream.CopyToAsync(memoryStream).ConfigureAwait(false);
+                        for (int i = 0; i < 10000; i++)
+                        {
+                            memoryStream.Seek(0, SeekOrigin.Begin);
+                            tweet = await JsonSerializer.DeserializeAsync<TwitterTweet>(memoryStream).ConfigureAwait(false);
+                            tweetContent += tweet.Text;
+                        }
                     }
                 }
 
@@ -85,6 +98,33 @@ namespace Provider
 
                 return;
             }
+        }
+
+          public static int RunSort(int milliseconds)
+        {
+            int[] num = new int[1000000];
+            int[] target = new int[1000000];
+            Random rnd = new Random();
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
+            int i = 0;
+
+            while (true)
+            {
+                i = i > 999999? 0 : ++i;
+                num[i] = rnd.Next(0, 999999);
+                Array.Sort(num);
+                watch.Stop();
+
+                if (watch.ElapsedMilliseconds > milliseconds)
+                {
+                    break;
+                }
+
+                watch.Start();
+            }
+
+            return 0;
         }
     }
 }
