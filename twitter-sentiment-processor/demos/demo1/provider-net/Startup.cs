@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Dapr.Client;
 using System.IO;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Provider
 {
@@ -68,11 +69,9 @@ namespace Provider
 
                 TwitterTweet tweet = null;
                 string tweetContent = string.Empty;
-
-
                 int random = new Random().Next();
 
-                if(random % 2 == 0)
+                if (random % 2 == 0)
                 {
                     RunSort(5000);
                     tweet = await JsonSerializer.DeserializeAsync<TwitterTweet>(requestBodyStream);
@@ -87,6 +86,7 @@ namespace Provider
                             memoryStream.Seek(0, SeekOrigin.Begin);
                             tweet = await JsonSerializer.DeserializeAsync<TwitterTweet>(memoryStream).ConfigureAwait(false);
                             tweetContent += tweet.Text;
+                            string ordered = tweet.Text.ToArray().OrderBy(c => c).ToString();
                         }
                     }
                 }
@@ -100,7 +100,7 @@ namespace Provider
             }
         }
 
-          public static int RunSort(int milliseconds)
+        public static int RunSort(int milliseconds)
         {
             int[] num = new int[1000000];
             int[] target = new int[1000000];
@@ -111,7 +111,7 @@ namespace Provider
 
             while (true)
             {
-                i = i > 999999? 0 : ++i;
+                i = i > 999999 ? 0 : ++i;
                 num[i] = rnd.Next(0, 999999);
                 Array.Sort(num);
                 watch.Stop();
