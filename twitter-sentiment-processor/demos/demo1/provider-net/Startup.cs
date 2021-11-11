@@ -8,7 +8,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Dapr.Client;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 
 namespace Provider
@@ -60,58 +59,36 @@ namespace Provider
                 // component.
                 endpoints.MapPost("tweets", Tweet);
             });
-
-            async Task Tweet(HttpContext context)
-            {
-                Regex validCharacterSet = new Regex(@"^[a-z0-9_-]+$", RegexOptions.IgnoreCase);
-                var client = context.RequestServices.GetRequiredService<DaprClient>();
-                var requestBodyStream = context.Request.Body;
-
-                TwitterTweet tweet = await JsonSerializer.DeserializeAsync<TwitterTweet>(requestBodyStream).ConfigureAwait(false);
-
-                string fullText = tweet.FullText;
-                if (string.IsNullOrEmpty(fullText))
-                {
-                    fullText = tweet.Text;
-                }
-                Console.WriteLine("Tweet received: {0}: {1}", tweet.ID, fullText);
-
-                if (!validCharacterSet.IsMatch(fullText))
-                {
-                    Console.WriteLine("There is invalid characters other than letter, numbers, underscore(_), and dash(-) signs.");
-                    return;
-                }
-                await client.SaveStateAsync<TwitterTweet>(stateStore, tweet.ID, tweet);
-                Console.WriteLine("Tweet saved: {0}: {1}", tweet.ID, tweet);
-                return;
-            }
         }
 
-        public static int RunSort(int milliseconds)
+        private async Task Tweet(HttpContext context)
         {
-            int[] num = new int[1000000];
-            int[] target = new int[1000000];
-            Random rnd = new Random();
-            Stopwatch watch = new Stopwatch();
-            watch.Start();
-            int i = 0;
+            Regex validCharacterSet = new Regex(@"^[a-z0-9_:\/-\\]+$", RegexOptions.IgnoreCase|RegexOptions.Compiled);
+            var client = context.RequestServices.GetRequiredService<DaprClient>();
+            var requestBodyStream = context.Request.Body;
 
-            while (true)
+            TwitterTweet tweet = await JsonSerializer.DeserializeAsync<TwitterTweet>(requestBodyStream).ConfigureAwait(false);
+
+            string fullText = tweet.FullText;
+            if (string.IsNullOrEmpty(fullText))
             {
-                i = i > 999999 ? 0 : ++i;
-                num[i] = rnd.Next(0, 999999);
-                Array.Sort(num);
-                watch.Stop();
-
-                if (watch.ElapsedMilliseconds > milliseconds)
-                {
-                    break;
-                }
-
-                watch.Start();
+                fullText = tweet.Text;
             }
+            Console.WriteLine("Tweet received: {0}: {1}", tweet.ID, fullText);
 
-            return 0;
+            bool includeInvalidCharacter = false;
+            for (int i = 0; i < 1000000; i++)
+            {
+                includeInvalidCharacter = !validCharacterSet.IsMatch(fullText);
+            }
+            if (includeInvalidCharacter)
+            {
+                Console.WriteLine("There is invalid characters other than letter, numbers, underscore(_), and dash(-) signs.");
+                return;
+            }
+            await client.SaveStateAsync<TwitterTweet>(stateStore, tweet.ID, tweet);
+            Console.WriteLine("Tweet saved: {0}: {1}", tweet.ID, tweet);
+            return;
         }
     }
 }
